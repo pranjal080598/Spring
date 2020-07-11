@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- begin_generated_IBM_copyright_prolog                             -->
+<!--                                                                  -->
+<!-- This is an automatically generated copyright prolog.             -->
+<!-- After initializing,  DO NOT MODIFY OR MOVE                       -->
+<!-- **************************************************************** -->
+<!-- Licensed Materials - Property of IBM                             -->
+<!-- 5724-Y95                                                         -->
+<!-- (C) Copyright IBM Corp.  2015, 2015    All Rights Reserved.      -->
+<!-- US Government Users Restricted Rights - Use, duplication or      -->
+<!-- disclosure restricted by GSA ADP Schedule Contract with          -->
+<!-- IBM Corp.                                                        -->
+<!--                                                                  -->
+<!-- end_generated_IBM_copyright_prolog                               -->
+
+<st:connections xmlns:st="http://www.ibm.com/xmlns/prod/streams/adapters"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+
+	<connection_specifications>
+		<connection_specification name="activemq">
+			<JMS initial_context="org.apache.activemq.jndi.ActiveMQInitialContextFactory"
+				provider_url="tcp://127.0.0.1:61616"
+				connection_factory="ConnectionFactory" />
+		</connection_specification>
+	</connection_specifications>
+
+
+	<access_specifications>
+	
+		<access_specification name="access_activemq">
+			<destination identifier="dynamicQueues/MapQueueForHeaderTest" delivery_mode="non_persistent" message_class="map" />
+			<uses_connection connection="activemq" />
+			<native_schema>
+				<attribute name="seqID" type="Long" />
+				<attribute name="msg" type="String" length="50" />
+			</native_schema>
+		</access_specification>
+		
+	</access_specifications>
+
+</st:connections>

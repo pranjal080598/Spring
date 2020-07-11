@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<projectDescription>
+	<name>springjdbc</name>
+	<comment></comment>
+	<projects>
+	</projects>
+	<buildSpec>
+		<buildCommand>
+			<name>org.eclipse.jdt.core.javabuilder</name>
+			<arguments>
+			</arguments>
+		</buildCommand>
+	</buildSpec>
+	<natures>
+		<nature>org.eclipse.jdt.core.javanature</nature>
+	</natures>
+	<linkedResources>
+		<link>
+			<name>jms</name>
+			<type>2</type>
+			<location>C:/Users/HP/eclipse-workspace/all libs/streamsx.jms-develop/streamsx.jms-develop/com.ibm.streamsx.jms/impl/java/src/com/ibm/streamsx/jms</location>
+		</link>
+	</linkedResources>
+</projectDescription>

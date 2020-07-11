@@ -1,0 +1,177 @@
+// *******************************************************************************
+// * Copyright (C)2019, International Business Machines Corporation and          *
+// * others. All Rights Reserved.                                                *
+// *******************************************************************************
+namespace com.ibm.streamsx.jms.sample;
+
+/**
+ *  JmsHeaderPropertiesGenericSample demonstrates how to send/read data to/from
+ *  a messaging server using the JMSSink and JMSSource operators. Additionally,
+ *  data is not only transmitted in the JMS message's body, but written and
+ *  read from JMS Header properties, too.
+ *
+ *  This sample connects to a messaging server as specified in the connection
+ *  document located in ./etc/connections.xml.  The connection info, and the
+ *  data schema for the message is defined in the connection document.
+ *
+ *  The values used in the connection document connect to an ActiveMQ running locally.
+ *
+ */
+
+use com.ibm.streamsx.jms::* ;
+
+
+composite JmsHeaderPropertiesGenericSample
+{
+	param
+		expression<rstring> $connectionDoc :	getSubmissionTimeValue("connectionDoc", "./etc/connections.xml") ;
+		expression<rstring> $connection :		getSubmissionTimeValue("connection", "activemq") ;
+		expression<rstring> $access :			getSubmissionTimeValue("access", "access_activemq") ;
+
+
+	type
+        MessageBodyData         = tuple<uint64 seqID, rstring msg> ;
+
+        JMSHeaderPropsSender	= tuple<ustring myUString,
+        								uint8	myUint8,
+        								uint16	myUint16,
+        								uint32	myUint32,
+        								uint64	myUint64
+        								> ;
+//        JMSHeaderPropsReceiver	= tuple<ustring	receivedUString,
+//        								uint8	receivedUint8,
+//        								uint16	receivedUint16,
+//        								uint32	receivedUint32,
+//        								uint64	receivedUint64
+//        								> ;
+        
+        JMSHeaderPropsReceiver	= tuple<map<ustring,ustring> allReceivedProperties> ;
+        
+        SenderData		  		= MessageBodyData, JMSHeaderPropsSender ;
+        ReveiverData		  	= JMSHeaderPropsReceiver, MessageBodyData ;
+		
+	
+	graph
+		
+		(stream<SenderData> InData) as DataReader = FileSource()
+		{
+			param
+				file :					"testData.txt" ;
+				format :				txt ;
+				
+			config
+				placement : partitionIsolation ;
+				
+		}
+		
+		
+		() as TestDataDumper = FileSink(InData)
+		{
+			param
+				file :					"testDataDump.txt" ;
+				format :				txt ;
+				//quoteStrings :			false ;
+				flush :					1u ;
+				writePunctuations :		false ;
+				flushOnPunctuation :	true ;
+				
+			config
+				placement : partitionIsolation ;
+				
+		}
+		
+				   
+		(stream<I> FilteredData01) as Filter01 = Functor(InData as I)
+		{
+			param filter: seqID % 2ul != 0ul;			
+		}
+		
+		
+		() as Producer01 = JMSSink(FilteredData01)
+		{
+			param
+				connectionDocument :	$connectionDoc ;
+				connection :			$connection ;
+				access :				$access ;
+				
+				jmsHeaderProperties :	"ustringValue/myUString/object"
+									+	",uint16Value/myUint16/object"
+									+	",uint64Value/myUint64/object";
+				
+			config
+				placement : partitionIsolation ;
+				
+		}
+		
+				   
+		(stream<I> FilteredData02) as Filter02 = Functor(InData as I)
+		{
+			param filter: seqID % 2ul == 0ul;			
+		}
+		
+		
+		() as Producer02 = JMSSink(FilteredData02)
+		{
+			param
+				connectionDocument :	$connectionDoc ;
+				connection :			$connection ;
+				access :				$access ;
+				
+				jmsHeaderProperties :	"uint8Value/myUint8/object"									
+									+	",uint32Value/myUint32/object";
+				
+			config
+				placement : partitionIsolation ;
+				
+		}
+
+
+/* ######################################################################################################################################### */
+/* ######################################################################################################################################### */
+/* ######################################################################################################################################### */
+
+
+		(stream<ReveiverData> ReadDataWithHeaderProps) as Consumer = JMSSource()
+		{
+			param
+				connectionDocument :                $connectionDoc ;
+				connection :                        $connection ;
+				access :                            $access ;
+				initDelay :                         4l ;
+				
+				jmsHeaderPropertiesOutAttrName :    "allReceivedProperties";
+				
+			config
+				placement : 			            partitionIsolation ;
+				
+		}
+		
+		
+		stream<I> SortedReadDataWithHeaderProps = Sort(ReadDataWithHeaderProps as I)
+		{
+			window
+				I :			tumbling, count(20);
+			param
+				sortBy :	seqID;
+				
+		}
+		                                    
+
+		() as ReceivedDataDumper = FileSink(SortedReadDataWithHeaderProps)
+		{
+			param
+				file :					"actual.txt" ;
+				format :				txt ;
+				//quoteStrings :			false ;
+				flush :					1u ;
+				
+				closeMode:				count;
+				tuplesPerFile:			20u;
+				
+			config
+				placement : partitionIsolation ;
+				
+		}   
+
+
+}

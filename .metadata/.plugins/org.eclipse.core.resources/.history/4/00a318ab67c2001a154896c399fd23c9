@@ -1,0 +1,5 @@
+package jdk.internal.loader;
+import org.springframework.core.io.Resource
+public class Resource {
+
+}

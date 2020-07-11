@@ -1,0 +1,523 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Copyright (C) 2010, 2019, International Business Machines Corporation -->
+<!-- All Rights Reserved                                                   -->
+<info:toolkitInfoModel xmlns:common="http://www.ibm.com/xmlns/prod/streams/spl/common" xmlns:info="http://www.ibm.com/xmlns/prod/streams/spl/toolkitInfo">
+  <info:identity>
+    <info:name>com.ibm.streamsx.jms</info:name>
+    <info:description>
+The JMS toolkit project is an open source IBM Streams toolkit project.
+It provides operators and functions that help you use IBM Streams to interact with JMS systems such as Websphere MQ or Apache ActiveMQ.
+
+The operators provide the ability for IBM Streams applications to send and receive data
+from a queue or topic that is posted on a WebSphere MQ or Apache ActiveMQ server.
+
+The `JMSource` and `JMSSink` operators use the standard JMS architecture and JMS 1.1 APIs to read and write data
+from WebSphere MQ v7.5, v8.0 and Apache ActiveMQ v5.7 and up.
+
+The following figure shows how the `JMSSource` and `JMSSink` operators in the JMS toolkit use standard JMS architecture and APIs.
+{doc/images/architecture_diagram_JMSadpaters.gif|This figure shows JMSSource and JMSSink operators that use Apache ActiveMQ and WebSphere MQ libraries to read and write from JMS providers.}
+
+The JMS toolkit operators must be configured to connect to messaging systems.
+This configuration information is specified in an XML document, called a connection specifications document.
+
+
++ Migration Guide
+
+If you have been using an older version of the JMS toolkit the following information
+will help you to migrate to the newer version.
+
+# Migrating to streamsx.jms v2.0.0
+
+* Parameters whose name ended in "AttrName" now end in "AttributeName". Simply renaming
+  such parameters will make your Streams application compile clean again.
+* The parameter 'jmsHeaderProperties' is not a single string anymore, but a list of
+  strings instead. If your configuration has been similar to the following line:
+    jmsHeaderProperties : &quot;propertyName1/streamsAttributeName1/typeSpecifier1,propertyName2/streamsAttributeName2/typeSpecifier2,...&quot; ;
+  Change it into this format:
+    jmsHeaderProperties : &quot;propertyName1/streamsAttributeName1/typeSpecifier1&quot;,&quot;propertyName2/streamsAttributeName2/typeSpecifier2&quot;,&quot;...&quot; ;
+
+
+
++ Developing and running applications that use the JMS toolkit
+
+To create applications that use the JMS toolkit, you must configure either Streams Studio
+or the SPL compiler to be aware of the location of the toolkit.
+
+# Before you begin
+
+* Install IBM Streams.  Configure the product environment variables by entering the following command:
+      source product-installation-root-directory/4.0.0.0/bin/streamsprofile.sh
+* Install a supported version of WebSphere MQ Client and Apache ActiveMQ on the same machine as IBM Streams.
+  WebSphere MQ Server might or might not be on the same machine.
+
+  * Apache ActiveMQ
+    * The `JMSSource` and `JMSSink` operators support Apache ActiveMQ 5.7 and up.
+      * The Apache ActiveMQ libraries must be installed on same machine as IBM Streams
+        because the `JMSSink` and `JMSSource` operators require the libraries that are installed with IBM Streams.
+        However, the ActiveMQ instance to which a message is sent can be a different machine.
+        You either must set the **STREAMS_MESSAGING_AMQ_HOME** environment variable to the location where Apache ActiveMQ is installed
+        or use the **classLibs** parameter to point to your messaging provider's class libraries.
+        For example:
+            export STREAMS_MESSAGING_AMQ_HOME=&quot;/home/streamsuser/ApacheActiveMQ&quot;
+  * WebSphere MQ Server
+    * The `JMSSource` and `JMSSink` operators support WebSphere MQ v7.5 and v8.0.
+    * The `JMSSource` and `JMSSink` operators require the WebSphere MQ Client libraries for Java if the messaging provider is WebSphere MQ.
+      * The WebSphere MQ Client libraries must be installed on the hosts where the JMS operators can be run.
+        You either must set the **STREAMS_MESSAGING_WMQ_HOME** environment variable to the location where WebSphere MQ is installed
+        or use the **classLibs** parameter to point to your messaging provider's class libraries.
+        For example:
+            export STREAMS_MESSAGING_WMQ_HOME=&quot;/opt/mqm&quot;
+      * Tip:
+        When using JMS over Websphere MQ / IBM MQ in server binding mode, you may need to update **LD_LIBRARY_PATH** definition
+        to .../java/lib64. Please, refer to your IBM MQ's documentation for more information.
+
+# About this task
+
+After the location of the toolkit is communicated to the compiler, the SPL artifacts that are specified in the toolkit
+can be used by an application. The application can include a use directive to bring the necessary namespaces into scope.
+Alternatively, you can fully qualify the operators that are provided by toolkit with their namespaces as prefixes.
+
+# Procedure
+
+1. Review the list of restrictions for the IBM Streams specialized toolkits in the product documentation.
+2. Verify that the appropriate environment variables are set for the messaging systems that you use.
+   * If you use `JMSSink` or `JMSSource` operators to connect to WebSphere MQ or Apache ActiveMQ systems,
+     set **STREAMS_MESSAGING_WMQ_HOME** or **STREAMS_MESSAGING_AMQ_HOME** respectively.
+3. Configure the SPL compiler to find the toolkit root directory. Use one of the following methods:
+  * Set the **STREAMS_SPLPATH** environment variable to the root directory of a toolkit or multiple toolkits (with : as a separator).
+    For example:
+        export STREAMS_SPLPATH=$STREAMS_INSTALL/toolkits/com.ibm.streamsx.jms
+  * Specify the **-t** or **--spl-path** command parameter when you run the **sc** command. For example:
+        sc -t $STREAMS_INSTALL/toolkits/com.ibm.streamsx.jms -M MyMain
+    where MyMain is the name of the SPL main composite.
+    **Note**: These command parameters override the **STREAMS_SPLPATH** environment variable.
+  * Add the toolkit location in IBM Streams Studio.
+4. Develop your application. To avoid the need to fully qualify the operators, add a use directive in your application.
+  * For example, you can add the following clause in your SPL source file:
+        use com.ibm.streamsx.jms::*;
+    You can also specify a use clause for individual operators by replacing the asterisk (\*) with the operator name. For example:
+        use com.ibm.streamsx.jms::JMSSink;
+5. Build your application.  You can use the **sc** command or Streams Studio.
+6. Start the IBM Streams instance.
+7. Run the application. You can submit the application as a job by using the **streamtool submitjob** command or by using Streams Studio.
+
++ Connection specifications document
+
+A connection specifications document is an XML document that describes how operators in the JMS toolkit
+connect to and access messaging systems.
+Each document contains a collection of &lt;connection_specification> elements and &lt;access_specification> elements.
+
+The relationship between connection specifications and access specifications is many-to-many.
+Operators can connect to the same messaging system (one connection specification) and access several different queues
+or topics from that service (many access specifications).
+For example, an operator can connect to a single queue or a single topic in the messaging system.
+
+Alternatively, operators can access equivalent data (one access specification) from several different messaging systems
+(many connection specifications), for example, accessing data from both a test system and a production system.
+
+The compiler checks that the document conforms to the semantic rules of the XML schema that is defined for these documents.
+The SPL compiler uses the information that is given in the connection and access specifications to configure the operator.
+The compiler does not attempt to connect to the messaging system or access its data to verify correct configuration at compile time.
+The operators have run-time checks to validate configuration;
+if the configuration is incorrect these checks might result in run time failures, which are captured in the processing element logs.
+
+The `JMSSource` and `JMSSink` operators parse the connection specifications document
+that is named by **connectionDocument** parameter at run time. If this parameter is not specified,
+the operator looks for a `etc/connections.xml` file, where the path is relative to the application root directory directory.
+
+A valid connection specifications document consists of a connections root element
+which contains one &lt;connection_specifications> element and one &lt;access_specifications> element.
+These elements serve as containers for the connection specifications and access specifications.
+Here is an abridged example of a complete connection specifications document,
+with all &lt;connection_specification> and &lt;access_specification> elements omitted:
+
+    &lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?>
+    &lt;st:connections xmlns:st=&quot;http://www.ibm.com/xmlns/prod/streams/adapters&quot;
+    xmlns:xsi=&quot;http://www.w3.org/2001/XMLSchema-instance&quot;>
+      &lt;connection_specifications>
+      ...
+      &lt;/connection_specifications>
+      &lt;access_specifications>
+      ...
+      &lt;/access_specifications>
+    &lt;/st:connections>
+
+++ Connection_specification element
+
+A &lt;connection_specifications> element is a sequence of zero or more &lt;connection_specification> elements.
+
+Each &lt;connection_specification> element has a single attribute, name.
+This name value is used in the **connection** parameter of JMS toolkit operators.
+
+A &lt;connection_specification> element must have exactly one JMS element.
+
++++ JMS element
+
+The &lt;JMS> element specifies the information that is needed by the `JMSSink` and `JMSSource` operators
+to establish a connection to messaging system.
+
+The following example shows connection specification that contains a &lt;JMS> element:
+
+    &lt;connection_specifications>
+      &lt;connection_specification name=&quot;amqConn&quot;>
+        &lt;JMS initial_context=&quot;org.apache.activemq.jndi.ActiveMQInitialContextFactory&quot;
+        provider_url = &quot;tcp://machinename.com:61616&quot;
+        connection_factory = &quot;ConnectionFactory&quot;
+        user=&quot;user1&quot;
+        password=&quot;password1&quot;/>
+      &lt;/connection_specification>
+    &lt;/connection_specifications>
+
+The &lt;JMS> element has the following attributes:
+* connection_factory
+  * This mandatory attribute value is the name of the ConnectionFactory administered object.
+    This administered object is within the directory service context that is specified by the initial_context attribute,
+    and it is used to establish the connection. For applications that use Apache ActiveMQ,
+    you can use the default administered object called ConnectionFactory.
+* initial_context
+  * This mandatory attribute represents the class name of the factory class that creates an initial context.
+    The following example shows the initial_context when the messaging provider is WebSphere MQ and it uses the `.bindings` file:
+    `com.sun.jndi.fscontext.RefFSContextFactory`
+  * The following example shows the initial_context when the messaging provider is Apache ActiveMQ:
+    `org.apache.activemq.jndi.ActiveMQInitialContextFactory`
+* password
+  * The password attribute contains the authentication credentials (password) for the user ID. This attribute is optional.
+* provider_url
+  * This mandatory attribute is a URL that points to the directory service that contains the administered objects
+    or the JNDI URL that stores the objects in the file system. The syntax of the URL varies based on the messaging provider.
+     * `file:///homes/abc/xyz/wef`:
+       Use this format if your application sends data to or receive messages from a WebSphere MQ queue or topic.
+       This format specifies that the administered objects are stored in a file called `.bindings`,
+       which is in the `/homes/abc/xyz/wef` directory.
+     * `file:abc/xyz/wef`:
+       Use this format if your application sends data to or receive messages from a WebSphere MQ queue or topic.
+       This format specifies that the administered objects are stored in a file called `.bindings`,
+       which is in the `abc/xyz/wef` directory relative to the application directory.
+     * `tcp://machinename.com:61616`:
+       Use this format if your application sends data to or receives messages from Apache ActiveMQ.
+* user
+  * The value of the user attribute provides the user identification under which the connection to the messaging provider is attempted.
+    This attribute is optional.
+
+++ Access_specification element
+
+A sequence of one or more &lt;access_specification> elements make up an &lt;access_specifications> element.
+In the JMS toolkit, the &lt;access_specification> element includes a &lt;destination> element.
+
+Each &lt;access_specification> element has a single attribute, name.
+The name value can be specified in the access parameter of a JMS toolkit operator.
+
+In the JMS toolkit, an &lt;access_specification> element has:
+* A &lt;destination> element;
+* One or more &lt;uses_connection> elements;
+* No more than one &lt;native_schema> element.
+
++++ Destination element
+
+The &lt;destination> element specifies the queue or topic that is used by the JMS toolkit operators.
+The element also specifies some parameters that control the behavior of the operator.
+
+For WebSphere MQ, the &lt;destination> element does not actually contain this information,
+instead it specifies the information indirectly by referencing a JMS administered object
+that is held in an external directory service.
+For Apache ActiveMQ, the &lt;destination> element can directly refer to a queue or a topic.
+
+The following example shows an access specification that contains a &lt;destination> element for the WebSphere MQ messaging system:
+
+    &lt;access_specifications>
+      &lt;access_specification name=&quot;Outtrading22&quot;>
+        &lt;destination identifier=&quot;TestDestination2&quot; delivery_mode=&quot;persistent&quot;
+        message_class=&quot;stream&quot;/>
+        &lt;uses_connection connection=&quot;wbe2&quot; />
+        &lt;native_schema>
+          &lt;attribute name=&quot;cntr&quot; type=&quot;Long&quot;/>
+        &lt;/native_schema>
+      &lt;/access_specification>
+    &lt;/access_specifications>
+
+The following example shows an access specification that contains a &lt;destination> element
+that directly refers to an ActiveMQ queue:
+
+    &lt;access_specifications>
+      &lt;access_specification name=&quot;amqAccess&quot;>
+        &lt;destination identifier=&quot;dynamicQueues/MapQueue&quot;
+        delivery_mode=&quot;persistent&quot; message_class=&quot;stream&quot; />
+        &lt;uses_connection connection=&quot;amqConn&quot;/>
+        &lt;native_schema>
+          &lt;attribute name=&quot;cntr&quot; type=&quot;Long&quot; />
+        &lt;/native_schema>
+      &lt;/access_specification>
+    &lt;/access_specifications>
+
+The &lt;destination> element has three attributes:
+* identifier
+  * This attribute value is the name of the destination administered object that is used.
+    In particular, it is an administered object within the directory service context that is
+    specified by the initial_context attribute in the connection specification.
+    The destination administered object can be either a JMS queue object or a JMS topic object. This attribute is required.
+  * If the messaging provider is Apache ActiveMQ, this attribute can represent the queue or topic that must be created
+    when accessing the messaging provider.
+* delivery_mode
+  * This attribute value specifies the quality of service that is applied by the messaging provider,
+    if it is not overridden by the messaging provider administration.
+    The value can be persistent or non_persistent, as defined by the JMS specification.
+    If this attribute is not specified, the default value is non_persistent.
+* message_class
+  * This attribute value specifies how a stream tuple is serialized into a WebSphere MQ or an Apache ActiveMQ message.
+    It operates with the &lt;native_schema> element. The value can be: bytes, empty, map, stream, text, wbe, wbe22, or xml.
+
+++++ Message class formats in the JMS toolkit
+
+The message class specifies the type of the JMS message that is output or expected by the operators in the JMS toolkit.
+It also affects how the message payload is converted to tuples or vice versa.
+
+The JMS toolkit supports the following values for the message_class attribute in the &lt;destination> element:
+bytes, empty, map, stream, text, wbe, wbe22, and xml.
+
+When the message_class attribute value is `bytes`:
+* The `JMSSink` operator constructs a JMS BytesMessage.
+  The BytesMessage is a stream of binary data that contains values that are taken from the input stream.
+  The values are serialized into the message in the order that is specified in the &lt;native_schema> element
+  and they use the data types from that element.
+* The `JMSSink` operator raises a runtime error if the &lt;native_schema> element does not specify the length
+  for all String and blob attributes or if a negative length other than -2 or -4 is specified.
+  If the length is positive, the operator pads or truncates the run time attributes to make it fit this length.
+  Blob attributes are padded with null values and String attributes are padded with spaces.
+  For String attributes, length is measured in number of bytes.
+* The `JMSSource` operator expects a JMS BytesMessage.
+  The BytesMessage contains the values of the elements that are listed in the &lt;native_schema>.
+  The values of the elements must occur in the order that is specified in the &lt;native_schema> element.
+  The data types must match the types that are specified in the schema.
+  If the data in the message is insufficient, the operator discards the entire message and logs a run time error.
+  * **Note**: The &lt;native_schema> element must specify the length of all the String and blob attributes,
+    unless the attribute is the final attribute in the &lt;native_schema> element.
+    * For a `JMSSource` operator, if the attribute is not the final attribute in the &lt;native_schema> element
+      and a length is not specified, a run-time error occurs.
+    * For a `JMSSource` operator, if the length of the &lt;attribute> element is -2 or -4,
+      the operator assume that the data that appears in the JMS message starts with a signed 2 or 4-byte length field.
+      This length field is an integer that is encoded in the same way as any other integer attribute in the message.
+      If the length value is incomplete, negative, or absent from the message, or there are insufficient bytes
+      remaining in the JMS message, the operator discards the entire message and logs a run-time error.
+    * If the length of the &lt;attribute> element is non-negative, then the operators attempt to read exactly
+      that number of bytes from the BytesMessage.
+      If there are insufficient bytes remaining in the JMS message, the operators discard the entire message and logs a run time error.
+    * For a `JMSSource` operator, if the length attribute value is not a supported value, a run-time error occurs.
+
+When the message_class attribute value is `empty`:
+* The `JMSSink` operator construct an empty JMS message.
+  For example, you can use an empty message to verify that your IBM Streams application can connect
+  to the WebSphere MQ server and that the message reaches its destination.
+  **Note**: This message_class value cannot be used with a &lt;native_schema> element.
+* The `JMSSource` operator expects an empty JMS message.
+
+When the message_class attribute value is `map`:
+* The `JMSSink` operator produces a JMS MapMessage.
+  The MapMessage is a collection of name, type and value triplets.
+  The triplets contain elements whose names and types are taken from the &lt;native_schema> element.
+  Their values are taken from the operator input stream.
+* The `JMSSource` operator expects a JMS MapMessage that contains elements whose names and types appear in the &lt;native_schema> element.
+  * If the schema contains an attribute which is not present in the MapMessage, the operator discards the entire message and logs a run time error.
+  * If the MapMessage contains an attribute whose type does not match the data type in the &lt;native_schema>,
+    the operators attempt to convert it using the standard JMS conversion rules.
+    If this conversion fails, the entire message is discarded and an error message is logged.
+  * If the MapMessage contains an attribute with a null value, the corresponding output stream attribute is set to the default value for its type.
+  * If the MapMessage contains attributes that are not listed in the &lt;native_schema>, the attributes are ignored.
+
+When the message_class attribute value is `stream`:
+* The `JMSSink` operator constructs a JMS StreamMessage.
+  The StreamMessage is an ordered list of type and value pairs. The pairs contain values that are taken from the input stream.
+  The values are serialized into the message in the order in which they are specified in the &lt;native_schema> element.
+  The values use the data types from the &lt;native_schema> element.
+* The `JMSSource` operator expects a JMS StreamMessage.
+  The StreamMessage contains the values of the elements that are listed in the &lt;native_schema> element.
+  The values must occur in the order that is specified in the &lt;native_schema> element.
+  The values must also have the data types that are specified in that schema.
+  * If the operator encounters an attribute in the StreamMessage that does not have the expected data type,
+    it attempts to convert the attribute to the data type specified by the &lt;native_schema> element.
+    If they conversion fails, the operator discards the entire message and logs a run time error.
+  * If the StreamMessage contains more attributes than the &lt;native_schema>, the attributes are ignored and a tuple is emitted.
+  * If the StreamMessage does not contain enough attributes, the operator discards the entire message and logs a run-time error.
+  * If the StreamMessage contains an attribute with a null value, the corresponding output stream attribute is set
+    to the default value for its type.
+
+When the message_class attribute value is `text`:
+When the text message class is specified in the connection document, the native schema must contain a single attribute of a String type.
+Text messages must be encoded in UTF-8. For support of other encoding, use bytes message class.
+* The `JMSSink` operator constructs a JMS TextMessage and the output schema for JMSSink must contain a single String attribute.
+* The `JMSSource` operator expects a JMS TextMessage and the input schema for JMSSource must contain a single String attribute.
+
+When the message_class attribute value is `wbe`:
+* The `JMSSink` operator constructs a JMS TextMessage.
+  The TextMessage contains an XML document in the WebSphere Business Events (WBE) event packet format.
+
+  The XML document contains a single &lt;connector-bundle> of type Event.
+  The XML namespace is `http://wbe.ibm.com/6.2/Event/xxx` where *xxx* is the input stream name.
+  The input port is used as the connector-bundle name attribute and also as a wrapper element that contains the stream attribute values.
+  The XML document contains a field for each attribute that is listed in the &lt;native_schema> element.
+
+  **Restriction**: The blob data type is not a supported when you use the wbe message class.
+* The `JMSSource` operator does not support the use of the wbe message_class attribute value.
+  If the operator encounters a message of class wbe, the operator discards the message.
+
+When the message_class attribute value is `wbe22`:
+* The `JMSSink` operator constructs a JMS TextMessage.
+  The TextMessage contains an XML document in the WebSphere Business Events 2.2 event packet format.
+
+  The XML document contains a single &quot;connector-object&quot; (event).
+  The input stream name is used for both the WBE event-name and event-object name.
+  The document contains a field for each attribute that is listed in the &lt;native_schema> element.
+
+  **Restriction**: The blob data type is not supported when you use the wbe22 message class.
+* The `JMSSource` operator does not support the use of the wbe22 message_class attribute value.
+  If the operator encounters a message of class wbe22, the operator discards the message.
+
+When the message_class attribute value is `xml`:
+* The `JMSSink` operator constructs a JMS message that contains a generic XML message.
+* The `JMSSource` operators do not support the use of the xml message_class attribute value.
+  If the operator encounters a message of class xml, it discards the message.
+
+If the operator encounters a message that does not match the message_class, the operator discards the message and logs an error.
+This situation happens, for example, when the message_class is set to map and the `JMSSource` operator encounters an JMS Stream message.
+
+The following is an example of the XML document that is generated for an input stream named StockCashMergerArbitrageStatus_T_SBC
+and a message_class value of wbe:
+
+    &lt;connector
+    xmlns='http://wbe.ibm.com/6.2/Event/StockCashMergerArbitrageStatus_T_SBC'
+    name='System S' version='6.2'>
+      &lt;connector-bundle
+      name='StockCashMergerArbitrageStatus_T_SBC'
+      type='Event'>
+      &lt;StockCashMergerArbitrageStatus_T_SBC'>
+      &lt;date data-type='string'>01-FEB-2005&lt;/date>
+      &lt;time data-type='string'>14:45:21.335&lt;/time>
+      &lt;ratio data-type='real'>0.747079&lt;/ratio>
+      &lt;alertType data-type='string'>IN&lt;/alertType>
+      &lt;dayNum data-type='integer'>12815&lt;/dayNum>
+      &lt;flag data-type='boolean'>true&lt;/flag>
+      &lt;/StockCashMergerArbitrageStatus_T_SBC'>
+      &lt;/connector-bundle>
+    &lt;/connector>
+
+The following is an example of the XML document that is generated for an input stream named iport$0
+and a message_class value of wbe22:
+
+    &lt;connector name='System S' version='2.2'>
+      &lt;connector-bundle
+      name='iport$0'
+      type='Event'>
+        &lt;connector-object name='iport$0'>
+          &lt;field name='uintdata'>100&lt;/field>
+          &lt;field name='somethingID'>Yes&lt;/field>
+          &lt;field name='somethingid'>YesToo&lt;/field>
+        &lt;/connector-object>
+      &lt;/connector-bundle>
+    &lt;/connector>
+
++++ Uses_connection element
+
+A &lt;uses_connection> element identifies a connection specification that can be used with the access specification.
+
+Here is an example of an abridged access specification that contains &lt;uses_connection> elements:
+
+    &lt;access_specification name=&quot;PersonSink&quot;>
+    ...
+      &lt;uses_connection connection=&quot;testSysten&quot; />
+      &lt;uses_connection connection=&quot;productionSystem&quot; />
+      ...
+    &lt;/access_specification>
+
+The &lt;uses_connection> element has a single attribute, connection, whose value is the name
+of a &lt;connection_specification> element in the same connection specifications document.
+An &lt;access_specification> element must have at least one &lt;uses_connection> element.
+
++++ Native_schema element
+
+In the JMS toolkit, the &lt;native_schema> element specifies the data attributes of the data
+that is received from or sent to WebSphere MQ or Apache ActiveMQ.
+For example, the &lt;native_schema> element identifies the attribute names, data types, and optionally their length.
+
+The following example is an abridged access specification that contains a &lt;native_schema> element:
+    &lt;access_specification name=&quot;OutTrading&quot;>
+      &lt;destination identifier=&quot;TestDestination&quot;
+      delivery_mode=&quot;persistent&quot; message_class=&quot;map&quot; />
+      ...
+      &lt;native_schema>
+        &lt;attribute name=&quot;id&quot; type=&quot;Int&quot; />
+        &lt;attribute name=&quot;fname&quot; type=&quot;String&quot; />
+        &lt;attribute name=&quot;lname&quot; type=&quot;String&quot; />
+      &lt;/native_schema>
+    &lt;/access_specification>
+
+The &lt;native_schema> element has no attributes; it has &lt;attribute> elements.
+
+++++ Attribute element
+
+The &lt;attribute> element specifies information about the attributes that are present in an output JMS message,
+or are expected in an input JMS message.
+
+The &lt;attribute> element has three possible attributes:
+* name
+  * This mandatory attribute specifies the name by which the attribute is known in the message.
+    The JMS toolkit operators use these identifiers exactly as specified to access data in the message.
+    For example, the operators do not change the case of the identifiers.
+* length
+  * The length attribute specifies the maximum length of the attribute.
+    The length attribute is required only for String and Bytes data types.
+    If the length attribute is specified for other data types, the `JMSSink` and `JMSSource` operators generate a run time error.
+    For the length attribute, the operator handles data based on the message class and the data type:
+    * `JMSSource`
+      * If the message class is bytes and String data in the message is smaller than the length specified in the native schema,
+        the message is discarded.
+      * For map and stream message classes, the length attribute has no significance.
+      * The Blob data type is not supported.
+    * `JMSSink`
+      * If the message class is bytes and String data in the tuple is smaller than the length specified in the native schema,
+        the String data is padded with spaces to fit the length. For other message classes, the String data is written as is.
+      * If the String data in the tuple is longer than the length specified in the native schema and the message class is either map,
+        stream, bytes, xml, wbe, or wbe22, the String data is truncated.
+      * If the message class is bytes and Bytes data in the tuple is smaller than the length specified in the native schema,
+        the Bytes data is padded with null values to fit the length. For other message classes, the Bytes data is written as is.
+      * If the Blob data in the tuple is longer than the length specified in the native schema and the message class is either map,
+        stream, bytes, or xml, the Blob data is truncated. For message classes wbe and wbe22, Blob data type is not supported.
+* type
+  * This mandatory attribute specifies the data type of the attribute.
+  * The following table lists the data types that can be used in the access specifications for the `JMSSink` and `JMSSource` operators.
+    It also lists the corresponding SPL types for each JMS type.
+        SPL type   JMS type based on message class
+                   map      stream   bytes    xml     wbe            wbe22
+        ===================================================================
+        int8       Byte     Byte     Byte     String  String         String
+        uint8      Byte     Byte     Byte     String  String         String
+        int16      Short    Short    Short    String  String         String
+        uint16     Short    Short    Short    String  String         String
+        int32      Int      Int      Int      String  String         String
+        uint32     Int      Int      Int      String  String         String
+        int64      Long     Long     Long     String  String         String
+        uint64     Long     Long     Long     String  String         String
+        float32    Float    Float    Float    String  String         String
+        float64    Double   Double   Double   String  String         String
+        boolean    Boolean  Boolean  Boolean  String  String         String
+        blob*      Bytes    Bytes    Bytes    String  Not supported  Not supported
+        rstring*   String   String   Bytes    String  String         String
+        decimal32  String   String   Bytes    String  String         String
+        decimal64  String   String   Bytes    String  String         String
+        decimal128 String   String   Bytes    String  String         String
+        timestamp* String   String   Bytes    String  String         String
+        ustring    String   String   Bytes    String  String         String
+   * **NOTE**:
+     * The blob SPL type is not supported for message classes wbe and wbe22 by the `JMSSink operator`.
+       The Blob data type is not supported by `JMSSource` operator.
+     * The information for the rstring SPL type assumes that you use UTF-8 encoding.
+     * The information for the timestamp SPL type assumes that you use the 1970 UNIX epoch.
+   * The following SPL data types are not supported by the JMS toolkit operators:
+     * enum
+     * complexb
+     * composite types
+     * xml
+</info:description>
+    <info:version>2.0.1</info:version>
+    <info:requiredProductVersion>4.3.0.0</info:requiredProductVersion>
+  </info:identity>
+  <info:dependencies/>
+</info:toolkitInfoModel>

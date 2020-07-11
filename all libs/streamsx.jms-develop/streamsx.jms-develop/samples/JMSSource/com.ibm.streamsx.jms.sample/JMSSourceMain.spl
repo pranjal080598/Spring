@@ -1,0 +1,74 @@
+// begin_generated_IBM_copyright_prolog                             
+//                                                                  
+// This is an automatically generated copyright prolog.             
+// After initializing,  DO NOT MODIFY OR MOVE                       
+// **************************************************************** 
+// THIS SAMPLE CODE IS PROVIDED ON AN "AS IS" BASIS. IBM MAKES NO   
+// REPRESENTATIONS OR WARRANTIES, EXPRESS OR IMPLIED, CONCERNING    
+// USE OF THE SAMPLE CODE, OR THE COMPLETENESS OR ACCURACY OF THE   
+// SAMPLE CODE. IBM DOES NOT WARRANT UNINTERRUPTED OR ERROR-FREE    
+// OPERATION OF THIS SAMPLE CODE. IBM IS NOT RESPONSIBLE FOR THE    
+// RESULTS OBTAINED FROM THE USE OF THE SAMPLE CODE OR ANY PORTION  
+// OF THIS SAMPLE CODE.                                             
+//                                                                  
+// LIMITATION OF LIABILITY. IN NO EVENT WILL IBM BE LIABLE TO ANY   
+// PARTY FOR ANY DIRECT, INDIRECT, SPECIAL OR OTHER CONSEQUENTIAL   
+// DAMAGES FOR ANY USE OF THIS SAMPLE CODE, THE USE OF CODE FROM    
+// THIS [ SAMPLE PACKAGE,] INCLUDING, WITHOUT LIMITATION, ANY LOST  
+// PROFITS, BUSINESS INTERRUPTION, LOSS OF PROGRAMS OR OTHER DATA   
+// ON YOUR INFORMATION HANDLING SYSTEM OR OTHERWISE.                
+//                                                                  
+// (C) Copyright IBM Corp. 2015, 2015  All Rights reserved.         
+//                                                                  
+// end_generated_IBM_copyright_prolog                               
+// *******************************************************************************
+// * Copyright (C)2014, International Business Machines Corporation and *
+// * others. All Rights Reserved. *
+// *******************************************************************************  
+
+namespace com.ibm.streamsx.jms.sample;
+     
+use com.ibm.streamsx.jms::* ;
+
+/** JMSSourceMain sample demonstrates how to read data from a messaging server using
+ *  the JMSSource operator.
+ * 
+ *  This sample connects to a messaging server as specified in the connection 
+ *  document located in ../etc/connections.xml.  The connection info, and the
+ *  data schema for the message is defined in the connection document.
+ * 
+ *  To connect to ActiveMQ:
+ *  * specify the ActiveMQ server's URL in the "provider_url" attribute of the connection specification named "activemq"
+ *  * in the SPL sample, update the JMSSource operator to use the "activemq" connection
+ *  * in the SPL sample, update the JMSSource operator to use the "access_activemq" access 
+ * 
+ *  To connect to to Websphere MQ:
+ *  * specify the binding file URL in the "provider_url" attribute of the connection specification named "wmq"
+ *  * specify a valid destination identity in the "access_wmq" access specification
+ *  * in the SPL sample, update the JMSSource operator to use the "wmq" connection
+ *  * in the SPL sample, update the JMSSource operator to use the "access_wmq" access     
+ * 
+ */
+composite JMSSourceMain
+{
+	type
+		PersonSchema = int32 id, rstring fname, rstring lname, int32 age, rstring gender, float32 score, float64 total ;
+	graph
+	
+		stream<PersonSchema> myInputStream = JMSSource()
+		{
+			param
+				connection : "activemq" ;
+				access : "access_activemq" ;
+				initDelay : 2l ;
+		}
+		
+		() as myInputSink = FileSink(myInputStream)
+		{
+			param
+				file : "persons.dat" ;
+				format : csv ;
+				quoteStrings : false ;
+		}
+
+}

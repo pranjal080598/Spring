@@ -1,0 +1,7 @@
+/output
+impl/lib
+opt/downloaded
+/target
+/.externalToolBuilders
+/bin/
+/info.xml~
